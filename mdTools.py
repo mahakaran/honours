@@ -1,3 +1,5 @@
+#Written by Mahakaran Sandhu, 2018-2019. 
+#Honours Year at the RSC, ANU. 
 import matplotlib.pyplot
 def plot_xvg(xvg_file, x_name, y_name):
     """Reads a GROMACS xvg file containing data from gmx energy. Plots the resulting data. You will need to provide labels for
