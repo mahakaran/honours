@@ -36,7 +36,7 @@ def sequence_Pr(datalist, alignment_length):
         outlist.append(out_tuple)
     return outlist
     
- def total_Pr(site_list):
+def total_Pr(site_list):
     #takes the output of sequence_Pr to calculate 1) the most probable sequence and 2) the overall posterior probability
     #of the best possible sequence. List --> tuple(str, float)
     seq_list = []
