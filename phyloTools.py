@@ -1,3 +1,6 @@
+#Written by Mahakaran Sandhu, 2018-2019. 
+#Honours Year, RSC, ANU. 
+
 import operator
 import numpy as np
 
@@ -5,8 +8,8 @@ def average(lst):
     return sum(lst) / len(lst)
     
 def aa_PR_reader(string, alignment_length):
-    #reads string output of PAML for a given site, returns dict of probability values for each AA. 
-    #str --> dict
+    """reads string output of PAML for a given site, returns dict of probability values for each AA. 
+    #str --> dict"""
     i = 17+alignment_length+2+2
     j = 17+alignment_length+2+7
     aa_list = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
@@ -21,9 +24,9 @@ def aa_PR_reader(string, alignment_length):
     #tested, works successfully
     
 def sequence_Pr(datalist, alignment_length):
-    #reads PAML data for probabilities at a particular notes for the entire sequence, and returns a list of tuples, 
-    #the first item in the tuple is AA site, and the second item is the dictionary of probabilities as obtained by the
-    #function aa_Pr_reader. List --> list of tuples, where tuple = (str, dict)
+    """reads PAML data for probabilities at a particular notes for the entire sequence, and returns a list of tuples, 
+    the first item in the tuple is AA site, and the second item is the dictionary of probabilities as obtained by the
+    function aa_Pr_reader. List --> list of tuples, where tuple = (str, dict)"""
     outlist = []
     for i in datalist: 
         site = i[2:10]
@@ -51,8 +54,8 @@ def sequence_Pr(datalist, alignment_length):
     return (best_sequence, sequence_Pr)
 
 def position_frequency_matrix(site_list, node_name): 
-    #takes the output of sequence_Pr and returns a PFM (numpy array). You can then print this array to a file for input
-    #into a AA logo program. Outputs a file in TRANSFAC matrix format. 
+    """takes the output of sequence_Pr and returns a PFM (numpy array). You can then print this array to a file for input
+    #into a AA logo program. Outputs a file in TRANSFAC matrix format. """
     outfile = open(str(node_name)+'frequencies.transfac', 'w+')
     sites = range(len(site_list))
     aa_list = [('A',[]), ('R',[]), ('N',[]),
@@ -90,9 +93,9 @@ def position_frequency_matrix(site_list, node_name):
         
     
 def read_rst(infile, node_list, seq_length):
-    #reads the PAML output file rst, and pulls the correct lines out, i.e. the lines containing posterior probabilties
-    #when particular nodes are specified. Sequence length also needs to be specified. Writes a list of tuple, with 
-    #each tuple (node number, node data). 
+    """reads the PAML output file rst, and pulls the correct lines out, i.e. the lines containing posterior probabilties
+    when particular nodes are specified. Sequence length also needs to be specified. Writes a list of tuple, with 
+    each tuple (node number, node data). """
     data = open(infile, 'r')
     datas = data.readlines()
     #if list element Prob dist at node x exists, append x number of following elements to a new list. 
@@ -111,7 +114,7 @@ def read_rst(infile, node_list, seq_length):
     return cat_data
 
 def ASR_analyser(infile, node_list, seq_length, alignment_length):
-    #for each node, run all the analysis functions defined above, and write correct output files. 
+    """for each node, run all the analysis functions defined above, and write correct output files. """
     ASR_data = read_rst(infile, node_list, seq_length)
     for i in ASR_data: 
         node = i[0]
