@@ -1,4 +1,4 @@
-# Honours
+# Honours Project: Molecular Evolution of Multi-Specificity in the Sirtuin-1 Family of Proteins
 Contains all scripts, notebooks and more that were used in my 2018-2019 Honours year at the Research School of Chemistry, ANU. 
 ## Project Abstract
 
