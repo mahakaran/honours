@@ -1,9 +1,4 @@
-#Written by Mahakaran Sandhu, 2018-2019. 
-#Honours Year at the RSC, ANU. 
-import matplotlib.pyplot
-def plot_xvg(xvg_file, x_name, y_name):
-    """Reads a GROMACS xvg file containing data from gmx energy. Plots the resulting data. You will need to provide labels for
-    axes. (infile, str, str) --> matplotlib object."""
+def plot_xvg(xvg_file):
     data = open(xvg_file)
     data = data.readlines()
     data = [i.strip() for i in data]
@@ -14,6 +9,4 @@ def plot_xvg(xvg_file, x_name, y_name):
         r = i.split()
         x_axis.append(float(r[0]))
         y_axis.append(float(r[1]))
-    matplotlib.pyplot.plot(x_axis, y_axis)
-    matplotlib.pyplot.xlabel(x_name)
-    matplotlib.pyplot.ylabel(y_name)
+    plt.plot(x_axis, y_axis)

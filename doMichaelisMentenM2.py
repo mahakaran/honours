@@ -1,3 +1,4 @@
+#Mahakaran Sandhu, 2019
 #This program uses a lot of packages.
 import numpy as np
 import pandas as pd
@@ -7,6 +8,9 @@ import numpy.polynomial.polynomial as polynomial
 from copy import deepcopy
 from scipy.optimize import curve_fit
 from scipy.stats import sem
+from scipy.stats.distributions import t
+import fpdf
+import os
 
 #Function Definitions
 
@@ -22,26 +26,35 @@ def convert2seconds(inputstr, minute=False):
     return result
 
 #This function fits a linear curve to set of data points. It's needed to find the initial rate of enzymatic activity.
-def linear_fit(time_axis, data_axis, drange = 'None', yrange=None):
-    """This function fits a linear curve to set of data points. Time_axis are the x-axis time data; data_axis are
+def linear_fit(time_axis, abs_data, well_names,savedir, drange = 'None', yrange=None):
+    """This function fits a linear curve to set of data points. Time_axis are the x-axis time data; abs_data are
     the y-axis absorbance data. The optional parameter drange can be used to specify the x-axis index range over 
     which to perform the fitting (Note:works by index, not by time values.)
     (list, list, tuple) --> np.array object"""
     if drange == 'None':
-        linfit = np.polyfit(time_axis,data_axis , 1)
+        linfit = np.polyfit(time_axis,abs_data , 1)
     elif drange != 'None':
-        linfit = np.polyfit(time_axis[drange[0]:drange[1]],data_axis[drange[0]:drange[1]] , 1)
+        linfit = np.polyfit(time_axis[drange[0]:drange[1]],abs_data[drange[0]:drange[1]] , 1)
     
     func = np.poly1d(linfit)  
     fig = plt.figure()
     ax  = fig.add_subplot(111)
-    plt.plot(time_axis, data_axis, 'bo', label="Data")
-    plt.plot(time_axis,func(time_axis), 'b-',label="Polyfit")
+    plt.plot(time_axis, abs_data, 'bo', label=well_names, markersize=2)
+    plt.plot(time_axis,func(time_axis), 'b-',label="Linear fit",color='k' )
+    plt.xlabel('time(s)')
+    plt.ylabel('Abs(340nm)')
+    plt.legend(loc='best')
+    plt.text(250,0.250, 'slope='+str(linfit[0]))
+
     if yrange!=None:
         ax.set_ylim(bottom=yrange[0], top=yrange[1])
     
+    plt.savefig(str(well_names)+'.png', dpi=100)
+
     plt.show()
     return linfit
+
+
 
 #A simple function to get concentration given A, epsilon, and pathlength.
 def BeerLambertTransform(absorbance, epsilon, pathlength):
@@ -89,7 +102,7 @@ def triplicateEditor(triplicatesList, omitRepl):
     return omission_triplicate_slopes
 
 #This is the big function, a lot is happening here. 
-def get_MM_data_points(excel_file, dranges=None, omitRepl=False, minute=False, yrange=None):
+def get_MM_data_points(excel_file, savedir, dranges=None, omitRepl=False, minute=False, yrange=None):
     """This function reads an Excel file, orders the data according to
     well, invokes both convert2seconds() and linear_fit(), performs initial statistics on slopes by replicate, and 
     returns a tuple of lists with the data needed.
@@ -140,14 +153,14 @@ def get_MM_data_points(excel_file, dranges=None, omitRepl=False, minute=False, y
         if dranges == None:
             print (sorted_data_tuples[i][0])
             print (i)
-            well_fit = linear_fit(timeDataSeconds, sorted_data_tuples[i][1], yrange)
+            well_fit = linear_fit(timeDataSeconds, sorted_data_tuples[i][1], sorted_data_tuples[i][0], yrange)
             print (well_fit[0])
         else:
             if len(dranges)==len(sorted_data_tuples):
                 
                 print (data_tuples[i][0])
                 print (i)
-                well_fit = linear_fit(timeDataSeconds, sorted_data_tuples[i][1], (dranges[i][0], dranges[i][1]), yrange)
+                well_fit = linear_fit(timeDataSeconds, sorted_data_tuples[i][1],sorted_data_tuples[i][0], savedir, (dranges[i][0], dranges[i][1]), yrange)
                 print (well_fit[0])
             else:
                 print ('ERROR: LENGTH OF SUPPLIED RANGES != LENGTH OF DATA ')
@@ -176,28 +189,46 @@ def get_MM_data_points(excel_file, dranges=None, omitRepl=False, minute=False, y
         triplicate_slopes.append(outlist)
 
     
-    if omitRepl != False:
-        edited_triplicate_slopes = triplicateEditor(triplicate_slopes, omitRepl)
-    else:
-        edited_triplicate_slopes = triplicate_slopes
     
 
-            
-                        
+
     #Apply Beer Lambert Law (also reflection about x-axis). Here we convert absorbance data into concentration data. 
     BeerLambertTransformed = []
     
-    for i in edited_triplicate_slopes:
+    for i in triplicate_slopes:
         transform = []
         for j in i:
             transform.append(-j*60000)
         BeerLambertTransformed.append(transform)
     
-                
+    print('THESE ARE BEER-LAMBERT TRANSFORMED SLOPES:')
+    print(BeerLambertTransformed)
+
+
+    outfile = open(excel_file[:-5]+'_SLOPES.csv', 'w+')
+
+    for i in BeerLambertTransformed:
+        for j in i:
+            if i.index(j) != 2:
+                outfile.write(str(j))
+                outfile.write(',')
+            else:
+                outfile.write(str(j))
+        outfile.write('\n')
+    outfile.close()
+    
+
+
+
+
+    if omitRepl != False:
+        edited_triplicate_slopes = triplicateEditor(BeerLambertTransformed, omitRepl)
+    else:
+        edited_triplicate_slopes = BeerLambertTransformed
                 
     #Here we do some statistics, obtaining the mean and standard error of the mean for the triplicates. 
-    meanOfTriplicates = [np.mean(i) for i in BeerLambertTransformed]
-    semOfTriplicates = [sem(i) for i in BeerLambertTransformed]    
+    meanOfTriplicates = [np.mean(i) for i in edited_triplicate_slopes]
+    semOfTriplicates = [sem(i) for i in edited_triplicate_slopes]    
 
     
     #Normalize to 0
@@ -220,27 +251,76 @@ def fitMichaelisMenten(subsConcentrations, MMDataPoints):
     (substrate_Concentrations, MMDataPoints(a tuple of format (points, stdevs))) --> (Vmax, Km)
     (list, 2-tuple) --> 2-tuple"""
     params, covar = curve_fit(MMEquation, subsConcentrations,MMDataPoints[0], p0=[2, 2]) 
+
+    #Now compute confidence intervals on kinetic parameters
+    alpha = 0.05
+    num_data_pts = len(MMDataPoints[0])
+    n_params = 2
+
+    dof = max(0,num_data_pts-n_params)
+
+    tval = t.ppf(1.0-alpha/2, dof)
+
+
+
+
+
+
+   
+
+    alpha = 0.05 # 95% confidence interval
+
+    n = len(MMDataPoints[0])    # number of data points
+    p = len(params) # number of parameters
+
+    dof = max(0, n-p) # number of degrees of freedom
+
+    tval = t.ppf(1.0 - alpha / 2.0, dof) # student-t value for the dof and confidence level
+
+    for i, p,var in zip(range(n), params, np.diag(covar)):
+        sigma = var**0.5
+        print ('c{0}: {1} [{2}  {3}]'.format(i, p,
+                                      p - sigma*tval,
+                                      p + sigma*tval))
+
+
+
+
+
+
     K_m = params[1]
     V_max = params[0]
+
+
     print ('The Km is: ' + str(K_m))
     print ('The Vmax is: ' + str(V_max))
-    return params
+
+
+    print ('THIS IS PARAMS:\n')
+    print (str(params))
+
+
+
+    return (params)
 
 #Unfortunately, we can't just plot an equation in Python...We need to generate data points etc. This function does
 #all of this:
-def plotMichaelisMenten(params, subsConcentrations, MMDataPoints, excel_file): 
+def plotMichaelisMenten(params, savedir, subsConcentrations, MMDataPoints, excel_file, MM_yrange): 
     """Given MM parameters (tuple(Vmax, Km))(generated by fitMichaelisMenten(), substrate concetrations (i.e. x-axis),
     and MM data points, plots a nice-looking MM plot."""
     substrate_fit = np.linspace(0.15,0,1000)
     velocities = [MMEquation(i, params[0], params[1]) for i in substrate_fit]
     uM_concs = [i*1000 for i in subsConcentrations]
-    plt.plot(substrate_fit, velocities, color='0.4')
-    plt.errorbar(subsConcentrations, MMDataPoints[0] ,xerr=None,yerr=MMDataPoints[1],fmt="none", capsize=5, ecolor='0.4', )
-    plt.scatter(subsConcentrations, MMDataPoints[0])
+    plt.plot(substrate_fit, velocities, color='k')
+    plt.errorbar(subsConcentrations, MMDataPoints[0] ,xerr=None,yerr=MMDataPoints[1],fmt="none", capsize=5, ecolor='k', )
+    plt.scatter(subsConcentrations, MMDataPoints[0], color='k')
     plt.ylabel('V (uM/min)')
     plt.xlabel('[S] (mM)')
+    if MM_yrange != None:
+        plt.ylim(MM_yrange)
     plt.title(excel_file[:-5])
-    plt.savefig(str(excel_file)+'.png', dpi=100)
+    plt.savefig('MM_plot.png', dpi=300)
+    plt.savefig('MM_plot.svg')
 
 
 
@@ -249,13 +329,13 @@ def plotMichaelisMenten(params, subsConcentrations, MMDataPoints, excel_file):
 #this direction sometime in the future. If this approach is taken, a control file (.ctl) will probably be required
 #to specify all of the parameters.
 
-def do_Michaelis_Menten(excel_file, drange, subsConcentrations,  omitConc, omitRepl=False, minute=False, yrange=None):
+def do_Michaelis_Menten(excel_file, savedir, drange, subsConcentrations,  omitConc, omitRepl=False, minute=False, yrange=None, MM_yrange=None):
     """Combines all of the above functions to generate a user-friendly 1-liner function. Also has the option
     omitConc which allows the user to omit problematic data points in the MM (this is concentration values, 
     not indexes). OmitRepl allows the user to omit specific replicates at a particular concentration (concentration
     index, not values here). There is redundancy between these 2 functionalities."""
     funcSubConcs = deepcopy(subsConcentrations)
-    MM_data_points = get_MM_data_points(excel_file, drange, omitRepl, minute, yrange)
+    MM_data_points = get_MM_data_points(excel_file, savedir, drange, omitRepl, minute, yrange)
     print ("And behold, the Michaelis-Menten Curve:")
     if len(omitConc)==0:
         MMparams = fitMichaelisMenten(subsConcentrations, MM_data_points)
@@ -267,7 +347,72 @@ def do_Michaelis_Menten(excel_file, drange, subsConcentrations,  omitConc, omitR
             del MM_data_points[1][ind]
   
         MMparams = fitMichaelisMenten(funcSubConcs, MM_data_points)
-    plotMichaelisMenten(MMparams, funcSubConcs, MM_data_points, excel_file)
+    plotMichaelisMenten(MMparams, savedir, funcSubConcs, MM_data_points, excel_file, MM_yrange)
     return (MM_data_points, MMparams)
 
 #I think this is working. 
+
+#This last function is added functionality for writing the data analysed above into a PDF. It's pretty expensive to run so be mindful. Pretty slow because of all the PNG files. Reducing DPI of PNG files likely to increase speed. 
+
+def MM_makePDF(MMgraphImName,KM, Vmax):
+
+
+    cwd = os.getcwd()
+    current_experiment = cwd.split('/')[-1]
+    current_experiment
+    kineticReads = [i for i in os.listdir('./') if '_' not in i]
+    kineticReads.sort()
+    finalMMplot  = [i for i in os.listdir('./') if ('_' in i) and ('png' in i)]
+
+    splitKRead = [kineticReads[x:x+12] for x in range(0, len(kineticReads), 12)]
+    splitKRead
+
+
+    betterSorted = []
+    for i in splitKRead:
+        out = []
+        to_append= []
+        for j in i:
+            if ('10' in j) or ('11' in j) or ('12' in j):
+                to_append.append(j)
+            else:
+                out.append(j)
+        output = out+to_append
+        betterSorted.append(output)
+        
+        
+    pdf = fpdf.FPDF()
+
+
+    pdf.add_page()
+    pdf.set_font('Times','', 14)
+
+    pdf.cell(100,100, 'MICHAELIS-MENTEN DATA ANALYSIS FOR EXPERIMENT '+current_experiment, border=0, align='L')
+    #pdf.cell(100,10,betterSorted[0][1],border=0, align='L')
+    for i in range(len(betterSorted)):
+        pdf.add_page()
+        pdf.image(betterSorted[i][0], 20,0,75)
+        pdf.image(betterSorted[i][1], 110,0,75)
+        pdf.image(betterSorted[i][2], 20,49,75)
+        pdf.image(betterSorted[i][3], 110,49,75)
+        pdf.image(betterSorted[i][4], 20,98,75)
+        pdf.image(betterSorted[i][5], 110,98,75)
+        pdf.image(betterSorted[i][6], 20,147,75)
+        pdf.image(betterSorted[i][7], 110,147,75)
+        pdf.image(betterSorted[i][8], 20,196,75)
+        pdf.image(betterSorted[i][9], 110,196,75)
+        pdf.image(betterSorted[i][10], 20,245,75)
+        pdf.image(betterSorted[i][11], 110,245,75)
+
+    pdf.add_page()
+    pdf.image(MMgraphImName,30,100,140)
+    pdf.cell(100,10, 'MICHAELIS-MENTEN PLOT FOR EXPERIMENT ' + current_experiment, border=0, align='L')
+    pdf.ln(h=5)
+    pdf.set_font('Times','', 10)
+
+    pdf.cell(100,10, 'The KM is '+ KM, border=0, align='L')
+    pdf.ln(h=5)
+    pdf.cell(100,10, 'The Vmax is '+Vmax, border=0, align='L')
+    
+    pdf.output(current_experiment+'.pdf', 'F')
+    
