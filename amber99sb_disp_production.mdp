@@ -1,0 +1,90 @@
+;    INTEGRATION - MD
+integrator               = md
+dt                       = 0.002 ; 2fs time step
+nsteps                   = 25000000 ; 50 ns simulation
+nstcomm                  = 1000 ; remove COM motion every 2 ps
+
+
+
+; ;    INTEGRATION - EM
+;integrator               = steep ; Steepest descent energy minimisation
+;emtol                    = 1000 ; Stop minimising when greatest force is smaller than 1000 kJ/mol/nm
+;nsteps                   = 10000 ; Maximum of 10000 steps
+;emstep                   = 0.01 ; Initial step size (nm); default 0.01
+
+
+
+; ;    CONSTRAINTS - EM
+;constraints              = None
+
+; ;    POSITION RESTRAINTS
+; ; If position restraints and pressure coupling are both on, the reference coords
+; ; should be scaled with the box. 'com' and 'all' both work, if one causes crashes
+; ; use the other
+;refcoord-scaling         = com        ;here we are using both posre and pressure coupling, so we need to invoke com.  
+;define                   = -DPOSRES   ; posre on all atoms. 
+
+;    OUTPUT CONTROL
+; Strangely, this is where GROMACS sets all its output control
+; mdrun switches don't change anything
+;nstxout                  = 4000 ; only last ; Steps between writing coords to uncompressed output trajectoryls
+;nstvout                  = 4000 ; Steps between writing velocities to uncompressed output trajectory
+;nstfout                  = 4000 ; never ; Steps between writing forces to uncompressed output trajectory
+nstlog                   = 5000 ; 10 ps ; Steps between writing energies to log file
+nstenergy                = 5000 ; 10 ps ; Steps between writing energies to energy file
+nstxout-compressed       = 5000 ; 10 ps ; Steps between writing coords to compressed output trajectory
+;compressed-x-precision  = 5000 ; Trajectory compression is lossy; this is the precision of that compression
+
+;    CUTOFF SCHEME - verlet
+; Verlet is faster, more parallelisable, more accurate, supports GPUs
+; Only use group for the legacy interactions it supports
+cutoff-scheme            = Verlet
+
+; ;    CUTOFF SCHEME - group
+; cutoff-scheme            = group
+; rlist                    = 1.2
+
+;    CONSTRAINTS - PRODUCTION MD
+; Constraints on all bonds permit 2 fs time step
+; LINCS is faster and more stable
+; Use SHAKE if you need angle constraints
+constraints              = h-bonds ; h-bonds constrained (some people choose all-bonds; that is less accurate but also less computationally expensive.)
+constraint-algorithm     = LINCS
+continuation             = yes
+
+;    LJ INTERACTIONS
+vdwtype                  = Cut-off
+rvdw                     = 1.2
+dispcorr                 = no
+
+;    COULOMB INTERACTIONS
+coulombtype              = PME
+rcoulomb                 = 1.2
+
+; ;   PRESSURE COUPLING - NPT equilibration. 
+; ; Berendsen thermostat for equilibration
+;pcoupl                   = Berendsen ; we use Berendsen for NPT equilibration -- switch to Parinello-Rahman for production. 
+;pcoupltype               = isotropic
+;tau-p                    = 0.5
+;compressibility          = 4.5e-5 4.5e-5
+;ref-p                    = 1.0
+
+;    PRESSURE COUPLING - production
+; Parrinello-Rahman produces better pressure distribution,
+; but is less stable and can oscillate if the box has to dramatically change size
+pcoupl                  = Parrinello-Rahman
+pcoupltype              = isotropic
+tau-p                   = 2.5
+compressibility         = 4.5e-5 4.5e-5
+ref-p                   = 1.0
+
+;    TEMPERATURE COUPLING (is on)
+tcoupl                   = V-rescale
+tc-grps                  = Protein_NAD_ZN  NA_CL_Water
+tau-t                    = 1.0      1.0
+ref-t                    = 300.00   300.00
+
+;    VELOCITY GENERATION - no velocity generation in production MD.
+gen-vel                  = no
+gen-temp                 = 300.00
+gen-seed                 = -1 ; -1 uses a random seed
