@@ -1,6 +1,15 @@
 #Written by Mahakaran Sandhu, 2018-2019. 
 #Honours Year, RSC, ANU. 
 
+#This module does the following: takes a PAML output rst file, and for nodes on interest, returns the most probable sequences
+#as a FASTA-formatted file (i.e. the sequences of ancestors); it also outputs a PSSM file (transfac format) for each node
+#of interest that includes the posterior probability distribution at each residue position for each node (i.e. ancestor) of 
+#interest. 
+
+
+#The primary function to import from this module is the ASR_analyser function; the functions that are above it are simply
+#used by the ASR_analyser. 
+
 import operator
 import numpy as np
 
