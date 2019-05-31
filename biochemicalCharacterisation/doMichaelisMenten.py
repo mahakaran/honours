@@ -1,4 +1,25 @@
-#Mahakaran Sandhu, 2019
+#Mahakaran Sandhu
+#Honours Year 2019, RSC, ANU
+
+
+#This module performs Michaelis-Menten kinetic fitting to a dataset, including extraction on initial rates. 
+#The dataset is in an Excel xlsx file. The program 
+#is totally automatic: the function do_Michaelis_Menten can be imported into a Jupyter Notebook (this module is designed
+#for use with Jupyter Notebooks), and will do all of the processes required for MM analyses straight from the Excel file,
+#greatly cutting down on data-processing time costs. However, this module was designed specificically for this project and 
+#the 96-well plate formats/concentrations etc will differ for other projects; this module will need to be modified for such 
+#projects.
+
+#The final part of this module takes all of the MM analyses performed and puts them into a PDF (including the initial kinetic
+#traces and linear fitting used to obtain initial rates). This PDF functionality is extremely useful for transparency in the
+#data analysis, and can be used in Supplmentary Information so other people can know that you've processed your data 
+#honestly, and there was no dodgy fitting to obtain desirable initial rates. 
+
+
+
+
+
+
 #This program uses a lot of packages.
 import numpy as np
 import pandas as pd
