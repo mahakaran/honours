@@ -1,2 +1,7 @@
-This subdirectory contains a GROMACS-compatible version of RIP-MD that was created in this project by tweaking the RIP-MD source code
-. The only files that were altered were main.py and lib/extractFrames.py
+This subdirectory contains a GROMACS-compatible version of RIP-MD that was created in this project by tweaking the RIP-MD source code.
+The only files that were altered were main.py and lib/extractFrames.py. To use the GROMACS compatible version of RIP-MD, download RIP-MD
+normally from the developers and install as per their directions. Then, copy main.py from this repo into the main RIP-MD 
+directory (i.e. replace the main.py that came with the installation, probably rename it so you can still use the normal version) 
+and also copy extractFrames.py into the lib directory of your RIP-MD installation (i.e. replace the extractFrames.py that
+came with the installation). That should allow you to use RIP-MD with GROMACS. 
+
